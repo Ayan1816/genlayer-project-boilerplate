@@ -9,20 +9,28 @@ class RoyJudgeArena(gl.Contract):
 
     @gl.public.write
     def submit_and_judge(self, user_addr: str, cat: str, content: str) -> str:
-        prompt = f'Evaluate {cat}: "{content}". Reply ONLY in JSON: {{"is_valid": true, "score_out_of_10": 8, "feedback": "Nice"}}'
-        res = gl.nondet.exec_prompt(prompt, response_format="json")
-        v = json.loads(res)
+        prompt = 'Evaluate ' + cat + ': ' + content + '. Reply strictly in JSON format: {"score": 8, "feedback": "Good"}'
+        res = gl.nondet.exec_prompt(prompt)
+        
+        try:
+            v = json.loads(res)
+            score = v.get("score", 5)
+            feedback = v.get("feedback", "No feedback")
+        except:
+            score = 5
+            feedback = res
+            
         self.total += 1
-        self.subs[self.total] = {
+        self.subs[str(self.total)] = {
             "user": user_addr,
             "category": cat,
             "content": content,
-            "score": v.get("score_out_of_10"),
-            "feedback": v.get("feedback")
+            "score": score,
+            "feedback": feedback
         }
-        return json.dumps({"status": "Success"})
+        return "Success"
 
     @gl.public.view
-    def get_leaderboard(self) -> dict:
-        return self.subs
-      
+    def get_leaderboard(self) -> str:
+        return json.dumps(self.subs)
+        
